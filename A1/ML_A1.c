@@ -5,6 +5,7 @@
 #define SIZE 101
 #define NUMATTRS 16
 #define NONE -1
+#define MAX 1000
 #define ANY -2
 #define NUM_TYPES 7
 
@@ -13,7 +14,7 @@ typedef struct hypothesis{
 }hypothesis;
 
 typedef struct hypothesisSet{
-	hypothesis hyp[100];
+	hypothesis* hyp;
 	int size;
 }hypothesisSet;
 
@@ -52,45 +53,28 @@ hypothesis initializeG()
 }
 
 /* Returns true(1) if hypothesis and instance are consistent */
-int isConsistent(hypothesis h, trainingExample te)
-{
-	for(int i=0; i<NUMATTRS; i++)
-		if(h.attrValues[i] == NONE || h.attrValues[i] != ANY && h.attrValues[i] != te.attrValues[i])
-	 		return 0;
-	return 1;
-}
-
-/* Returns 1(true) if the example matches any of the hypothesis in G, otherwise 0(false) */
-int isGMatch(hypothesisSet hypSet, trainingExample te)
-{
-	for(int i=0; i<hypSet.size; i++)
-		if(isConsistent(hypSet.hyp[i], te))
-			return 1;
-	return 0;
-}
-
-/* Returns 1(true) if h1 is more general than h2 */
-int isMoreGeneral(hypothesis h1, hypothesis h2)
+int isConsistent(hypothesis h, trainingExample te, int posValue)
 {
 	for(int i=0; i<NUMATTRS; i++){
-		if(h1.attrValues[i] == NONE)
+		if(h.attrValues[i] == NONE){
+			if(te.value != posValue)
+				return 1;
+			else
+				return 0;
+		}
+		else if(h.attrValues[i] == ANY)
 			continue;
-		if(h1.attrValues[i] != h2.attrValues[i] && h1.attrValues[i] != ANY)
-			return 0;
+		else if(h.attrValues[i] != te.attrValues[i]){
+			if(te.value != posValue)
+				return 1;
+			else
+				return 0;
+		}
 	}
-	return 1;
-}
-
-/* Returns 1(true) if h1 is more specific than h2 */
-int isMoreSpecific(hypothesis h1, hypothesis h2)
-{
-	for(int i=0; i<NUMATTRS; i++){
-		if(h1.attrValues[i] == NONE)
-			continue;
-		if(h1.attrValues[i] != h2.attrValues[i] && h2.attrValues[i] != ANY)
-			return 0;
-	}
-	return 1;
+	if(te.value == posValue)
+		return 1;
+	else
+		return 0;
 }
 
 int conductVoting()
@@ -180,6 +164,7 @@ trainingSet extractData(int size)
 	return set;
 }
 
+/* Prints all the training examples in the training set */
 void printTrainingSet(trainingSet set, int numTrainingExamples)
 {
 	for(int i=0; i<numTrainingExamples; i++){
@@ -191,138 +176,19 @@ void printTrainingSet(trainingSet set, int numTrainingExamples)
 	}
 }
 
-hypothesisSet removeNonMatching(hypothesisSet hs, trainingExample te)
-{
-	hypothesisSet hnew = hs;
-	int j = 0;
-	for(int i=0; i<hs.size; i++){
-		if(isConsistent(hs.hyp[i], te)){
-			hnew.hyp[j] = hs.hyp[i];
-			j++;
-		}
-	}
-	hnew.size = j;
-	return hnew;
-}
-
-hypothesisSet removeMatching(hypothesisSet hs, trainingExample te)
-{
-	hypothesisSet hnew = hs;
-	int j = 0;
-	for(int i=0; i<hs.size; i++){
-		if(!isConsistent(hs.hyp[i], te)){
-			hnew.hyp[j] = hs.hyp[i];
-			j++;
-		}
-	}
-	hnew.size = j;
-	return hnew;
-}
-
-int attrMatch(int attr1, int attr2)
-{
-	int match = 1;
-	if(attr1 != attr2)
-		if(attr1 != ANY && attr2 != ANY)
-			match = 0;
-	return match;
-}
-
-/* Returns the unique minimal generalization, h, of s such that h matches
-   the given positive instance and some member of G is more general (or
-   equally general) than h. */
-hypothesis getMinGeneralization(hypothesis h, trainingExample te)
-{
-	for(int i=0; i<NUMATTRS; i++){
-		if(h.attrValues[i] != te.attrValues[i] && !attrMatch(h.attrValues[i], te.attrValues[i])){
-			if(h.attrValues[i] == NONE){
-				h.attrValues[i] = te.attrValues[i];
-			}
-			else{
-				h.attrValues[i] = ANY;
-			}
-		}
-	}
-	return h;
-}
-
+/* Prints a hypothesis */
 void printHypothesis(hypothesis h)
 {
 	printf("hypothesis: <");
 	for(int i=0; i<NUMATTRS; i++){
-		printf("%d,",h.attrValues[i]);
+		if(h.attrValues[i] == NONE)
+			printf("ϕ,");
+		else if(h.attrValues[i] == ANY)
+			printf("?,");
+		else
+			printf("%d,",h.attrValues[i]);
 	}
 	printf(">");
-}
-
-/* Specialize just enough */
-hypothesisSet getMinSpecialization(hypothesis h, trainingExample te)
-{
-	hypothesisSet specializations;
-	specializations.size = 0;
-	int values[] = {0,2,4,5,6,8};
-	for(int i=0; i<NUMATTRS; i++){
-		if(h.attrValues[i] == ANY){
-			hypothesis hnew;
-			if(i == 12){
-				for(int j=0; j<6; j++){
-					if(te.attrValues[i] == values[j]){
-						for(int k=0; k<6; k++){
-							if(j != k){
-								hnew = h;
-								hnew.attrValues[i] = values[k];
-								specializations.hyp[specializations.size] = hnew;
-								specializations.size += 1;
-							}
-						}
-						break;
-					}
-				}
-			}
-			else{
-				hnew = h;
-				if(te.attrValues[i] == 0){
-					hnew.attrValues[i] = 1;
-				}
-				else{
-					hnew.attrValues[i] = 0;
-				}
-				specializations.hyp[specializations.size] = hnew;
-				specializations.size += 1;
-				//printf("i = %d size = %d\n",i,specializations.size);
-			}
-		}
-	}
-	//printf("size = %d\n",specializations.size);
-	return specializations;
-}
-
-int processGeneralization(hypothesis h, hypothesisSet G)
-{
-	if(G.size == 0)
-		return 1;
-	for(int i=0; i<G.size; i++){
-		if(isMoreSpecific(h, G.hyp[i]))
-			return 1;
-	}
-	return 0;
-}
-
-hypothesisSet processSpecializations(hypothesisSet specializations, hypothesisSet S)
-{
-	hypothesisSet validSpecializations;
-	hypothesis h;
-	for(int i=0; i<NUMATTRS; i++)h.attrValues[i] = NONE;
-	for(int i=0; i<S.size; i++){
-		for(int j=0; j<specializations.size; j++){
-			if(isMoreGeneral(specializations.hyp[j], S.hyp[i])){
-				validSpecializations.hyp[validSpecializations.size] = specializations.hyp[j];
-				validSpecializations.size += 1;
-			}
-			//else if(S[i] == initializeS())validSpecializations.append(specializations[j])
-		}
-	}
-	return validSpecializations;
 }
 
 /* Check if two hypotheses are equal */
@@ -346,123 +212,227 @@ int find(hypothesisSet hs, hypothesis h)
 	return -1;
 }
 
-/* Remove from G any h that is more specific than any other hypothesis in G */
-hypothesisSet removeMoreSpecific(hypothesisSet G)
-{
-	hypothesisSet hnew;
-	hnew.size = 0;
-	for(int i=0; i<G.size; i++){
-		for(int j=0; j<G.size; j++){
-			if(i != j && isMoreSpecific(G.hyp[i], G.hyp[j])){
-				int idx = find(hnew, G.hyp[i]);
-				if(idx != -1){
-					hnew.hyp[idx] = hnew.hyp[hnew.size-1];
-					hnew.size -= 1;
-				}
-			}
-		}
-	}
-	return hnew;
-}
-
-hypothesisSet add(hypothesisSet hs1, hypothesisSet hs2)
-{
-	for(int i=0; i<hs2.size; i++){
-		if(find(hs1, hs2.hyp[i]) == -1){
-			hs1.hyp[hs1.size] = hs2.hyp[i];
-			hs1.size += 1;
-		}
-	}
-	return hs1;
-}
-
+/* Prints all the hypotheses in the hypothesis set */
 void printHypothesisSet(hypothesisSet hs)
 {
 	printf("SIZE = %d\n", hs.size);
 	for(int i=0; i<hs.size; i++){
-		printf("<");
-		for(int j=0; j<NUMATTRS; j++){
-			printf("%d,",hs.hyp[i].attrValues[j]);
-		}
-		printf(">\n");
+		printf("\t\t");
+		printHypothesis(hs.hyp[i]);
+		printf("\n");
 	}
 }
 
-void  printTrainingExample(trainingExample te) {
+/* Prints a training example */
+void printTrainingExample(trainingExample te) {
 	printf("TE: <");
 	for(int i=0; i<NUMATTRS; i++){
 		printf("%d,",te.attrValues[i]);
 	}
-	printf(">    value: %d\n",te.value);
+	printf(">  value: %d\n",te.value);
 }
 
-/* The main algorith for calculating Version Space using Candidate Elimination */
+/* Adds a hypothesis to a hypothesis Set */
+void addToHypothesisSet(hypothesisSet *hs,hypothesis h){
+    for(int i=0;i<(*hs).size;i++){
+        if(equal((*hs).hyp[i], h))
+            return;
+    }
+    (*hs).hyp[(*hs).size] = h;
+    (*hs).size++;
+}
+
+/* Removes a hypothesis from a hypothesis set */
+void removeFromHypothesisSet(hypothesisSet *hs, int j){
+    (*hs).hyp[j]=(*hs).hyp[(*hs).size-1];
+    (*hs).size--;
+}
+
+/* Checks if the first hypothesis is more general than the other */
+int isMoreGeneral(hypothesis h1, hypothesis h2)
+{
+	int more = 1;
+	for(int i=0; i<NUMATTRS; i++){
+		if(h1.attrValues[i] != h2.attrValues[i]){
+			if(h2.attrValues[i] == NONE)
+				continue;
+			else if(h1.attrValues[i] != ANY)
+				more = 0;
+		}
+	}
+	return more;
+}
+
+/* Checks if the first hypothesis is more specific than the other */
+int isMoreSpecific(hypothesis h1, hypothesis h2)
+{
+	int more = 1;
+	for(int i=0; i<NUMATTRS; i++){
+		if(h1.attrValues[i] != h2.attrValues[i]){
+			if(i == 12){
+				if(h2.attrValues[i] != ANY && h1.attrValues[i] != NONE)
+						more = 0;
+			}
+			else if(h2.attrValues[i] == ANY || h1.attrValues[i] == NONE)
+					continue;
+			else
+				more = 0;
+		}
+	}
+	return more;
+}
+
+/* Checks if there is a more general hypothesis present in the hypothesis set */
+int checkForMoreGeneral(hypothesisSet *hs, hypothesis h)
+{
+	for(int i=0; i<(*hs).size; i++){
+		if(equal((*hs).hyp[i], h))
+			continue;
+		if(isMoreGeneral((*hs).hyp[i], h))
+			return 1;
+	}
+	return 0;
+}
+
+/* Checks if there is a more specific hypothesis present in the hypothesis set */
+int checkForMoreSpecific(hypothesisSet* hs, hypothesis h)
+{
+	for(int i=0; i<(*hs).size; i++){
+		if(equal((*hs).hyp[i], h))
+			continue;
+		if(isMoreSpecific((*hs).hyp[i], h))
+			return 1;
+	}
+	return 0;
+}
+
+/* Returns the unique minimal generalization, h, of s such that h matches
+   the given positive instance and some member of G is more general (or
+   equally general) than h. */
+void getMinGeneralization(hypothesisSet *S, hypothesisSet* G, hypothesis h, trainingExample te)
+{
+	for(int i=0; i<NUMATTRS; i++){
+		if(h.attrValues[i] == NONE)
+			h.attrValues[i] = te.attrValues[i];
+		else if(te.attrValues[i] == NONE || h.attrValues[i] == ANY)
+			continue;
+		else{
+			if(h.attrValues[i] != te.attrValues[i])
+				h.attrValues[i] = ANY;
+		}
+	}
+	if(checkForMoreGeneral(G, h)){
+		addToHypothesisSet(S,h);
+	}
+}
+
+/* Specialize just enough */
+void getMinSpecialization(hypothesisSet* G, hypothesisSet* S, hypothesis h, trainingExample te)
+{
+	int values[] = {0,2,4,5,6,8};
+	for(int i=0; i<NUMATTRS; i++){
+		if(h.attrValues[i] == NONE)
+			continue;
+		else if(i != 12){
+			if(h.attrValues[i] == ANY){
+				h.attrValues[i] = 1-te.attrValues[i];
+				
+				if(checkForMoreSpecific(S, h)){
+					addToHypothesisSet(G,h);
+				}
+				h.attrValues[i] = ANY;
+			}
+			else if(h.attrValues[i] == te.attrValues[i]){
+				h.attrValues[i] = NONE;
+				if(checkForMoreSpecific(S, h)){
+					addToHypothesisSet(G,h);
+				}
+				h.attrValues[i] = te.attrValues[i];
+			}
+		}
+		else if(i == 12){
+			if(h.attrValues[i] == ANY){
+				for(int j=0; j<6; j++){
+					if(te.attrValues[i] != values[j]){
+						h.attrValues[i] = values[j];
+						if(checkForMoreSpecific(S, h)){
+							addToHypothesisSet(G,h);
+						}
+						h.attrValues[i] = ANY;
+					}
+				}
+			}
+			else if(h.attrValues[i] == te.attrValues[i]){
+				h.attrValues[i] = NONE;
+				if(checkForMoreSpecific(S, h)){
+					addToHypothesisSet(G,h);
+				}
+				h.attrValues[i] = te.attrValues[i];
+			}
+		}
+	}
+}
+
+/* The main algorithm for calculating Version Space using Candidate Elimination */
 versionSpace solve(trainingSet ts, int numTrainingExamples, int posValue)
 {
 	versionSpace vs;
 	hypothesisSet G, S;
+	G.hyp = (hypothesis*)malloc(sizeof(hypothesis)*MAX);
+	S.hyp = (hypothesis*)malloc(sizeof(hypothesis)*MAX);
 	G.hyp[0] = initializeG();
 	S.hyp[0] = initializeS();
 	G.size = S.size = 1;
 
-	printHypothesisSet(S);
-	printHypothesisSet(G);
-	printf("\n");
-
 	for(int i=0; i<numTrainingExamples; i++){
 		if(ts.examples[i].value == posValue){
-			printf("POSITIVE ");
-			printTrainingExample(ts.examples[i]);
-			G = removeNonMatching(G, ts.examples[i]);
-			hypothesisSet Snew = S;
+			for(int j=0; j<G.size; j++){
+				if(!isConsistent(G.hyp[j], ts.examples[i], posValue)){
+					G.hyp[j] = G.hyp[G.size-1];
+					G.size -= 1;
+					j--;
+				}
+			}
 			for(int j=0; j<S.size; j++){
-				if(!isConsistent(S.hyp[j], ts.examples[i])){
-					Snew.hyp[j] = Snew.hyp[Snew.size-1];
-					Snew.size -= 1;
-					hypothesis general = getMinGeneralization(S.hyp[j], ts.examples[i]);
-					if(processGeneralization(general, G)){
-						Snew.hyp[Snew.size] = general;
-						Snew.size += 1;
+				if(!isConsistent(S.hyp[j], ts.examples[i], posValue)){
+					hypothesis htemp = S.hyp[j];
+					S.hyp[j] = S.hyp[S.size-1];
+					S.size -= 1;
+					j--;
+					getMinGeneralization(&S, &G, htemp, ts.examples[i]);
+					for(int k=0; k<S.size; k++){
+						if(checkForMoreSpecific(&S,S.hyp[k])){
+							S.hyp[k] = S.hyp[S.size-1];
+							S.size -= 1;
+							k--;
+						}
 					}
 				}
 			}
-			S = Snew;
-			//S = removeMoreGeneral(S);
-			printHypothesisSet(S);
-			printHypothesisSet(G);
 		}
 		else{
-			printf("NEGATIVE ");
-			printTrainingExample(ts.examples[i]);
-			S = removeNonMatching(S, ts.examples[i]);
-			hypothesisSet Gnew = G;
+			for(int j=0; j<S.size; j++){
+				if(!isConsistent(S.hyp[j], ts.examples[i], posValue)){
+					S.hyp[j] = S.hyp[S.size-1];
+					S.size -= 1;
+					j--;
+				}
+			}
 			for(int j=0; j<G.size; j++){
-				if(!isConsistent(G.hyp[j], ts.examples[i])){
-					Gnew.hyp[j] = Gnew.hyp[Gnew.size-1];
-					Gnew.size -= 1;
+				//printf("here j = %d\n",j);
+				if(checkForMoreGeneral(&G,G.hyp[j])){
+					G.hyp[j] = G.hyp[G.size-1];
+					G.size -= 1;
+					j--;
+					continue;
 				}
-				hypothesisSet specializations = getMinSpecialization(G.hyp[j], ts.examples[i]);
-				printf("specializations: ");
-				printf("%d => ",specializations.size);
-				printHypothesisSet(specializations);
-				specializations = processSpecializations(specializations, S);
-				Gnew = add(Gnew, specializations);
-			}
-			G = Gnew;
-			G = removeMoreSpecific(G);
-			printHypothesisSet(S);
-			printHypothesisSet(G);
-		}
-		if(S.size == G.size){
-			int flag = 1;
-			for(int i=0; i<S.size; i++){
-				if(find(G, S.hyp[i]) == -1){
-					flag = 0;
-					break;
+				if(!isConsistent(G.hyp[j], ts.examples[i], posValue)){
+					hypothesis htemp = G.hyp[j];
+					removeFromHypothesisSet(&G,j);
+					j--;
+					getMinSpecialization(&G, &S, htemp, ts.examples[i]);
 				}
 			}
-			if(flag)
-				break;
 		}
 	}
 	vs.G = G;
@@ -474,17 +444,21 @@ int main()
 {
 	int numExamples, numTrainingExamples, numTestExamples;
 	numExamples = SIZE;
-	numTrainingExamples = (int)((double)numExamples*0.8);
+	numTrainingExamples = (int)((double)numExamples);
 	numTestExamples = numExamples - numTrainingExamples;
-	trainingSet set = extractData(SIZE), trainSet, testSet;
-	splitTrainingAndTestData(set, &trainSet, &testSet, numExamples, numTrainingExamples);
-	printTrainingSet(trainSet, numTrainingExamples);
+	trainingSet set = extractData(SIZE);
+	trainingSet trainSet = set, testSet;
 	versionSpace vs[NUM_TYPES];
-	for(int i=3; i<=3; i++){
+	for(int i=1; i<=7; i++){
 		vs[i-1] = solve(trainSet, numTrainingExamples, i);
-		printf("Specific Boundary of %d\n",i);
+		printf("CLASS %d: \n",i);
+		if(vs[i-1].S.size == 0 || vs[i-1].G.size == 0){
+			printf("Concept cannot be learnt\n\n");
+			continue;
+		}
+		printf("\tSpecific Boundary\n\t\t");
 		printHypothesisSet(vs[i-1].S);
-		printf("General Boundary of %d\n",i);
+		printf("\tGeneral Boundary\n\t\t");
 		printHypothesisSet(vs[i-1].G);
 		printf("\n");
 	}
