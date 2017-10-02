@@ -1,7 +1,20 @@
+/*
+	BITS F464 - MACHINE LEARNING
+	(Assignment 1: ML_A1.c)
+
+	Task: Implementation of Candidate Elimination Algorithm
+
+	@authors:
+		 Ankit Anand (2015A7PS0145H)
+		 Raunak Ritesh (2015A7PS0160H)
+		 Samkit Jain (2015A7PS0102H)
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
+/* CONSTANTS */
 #define SIZE 101
 #define NUMATTRS 16
 #define NONE -1
@@ -9,6 +22,7 @@
 #define ANY -2
 #define NUM_TYPES 7
 
+/* STRUCTURE DEFINITIONS */
 typedef struct hypothesis{
 	int attrValues[NUMATTRS];
 }hypothesis;
@@ -32,7 +46,11 @@ typedef struct versionSpace{
 	hypothesisSet G, S;
 }versionSpace;
 
-/* Initialize Specific boundary of version space */
+/**
+	Initializes hypothesis with most Specific boundary of version space
+	
+	@return the most specific hypothesis (contains all NONE values)
+*/
 hypothesis initializeS()
 {
 	hypothesis S;
@@ -42,7 +60,11 @@ hypothesis initializeS()
 	return S;
 }
 
-/* Initialize General boundary of version space */
+/** 
+	Initialize hypothesis with most General boundary of version space 
+	
+	@return the most specific hypothesis (contains all NONE values)
+*/
 hypothesis initializeG()
 {
 	hypothesis G;
@@ -52,7 +74,15 @@ hypothesis initializeG()
 	return G;
 }
 
-/* Returns true(1) if hypothesis and instance are consistent */
+/** 
+	Checks if a hypothesis and an instance are consistent with each other
+
+	@param h: given hypothesis
+		   te: given training Example
+		   posValue: value of the positive class considered in one v/s all technique
+	
+	@return 1 if consistent, 0 otherwise
+*/
 int isConsistent(hypothesis h, trainingExample te, int posValue)
 {
 	for(int i=0; i<NUMATTRS; i++){
@@ -94,7 +124,15 @@ int classify(versionSpace vs[], trainingExample te)
 	return 0;
 }
 
-/* Splits the training examples into 60:40 ratio of training and test set of data respectively */
+/**
+	Splits the training examples into 80:20 ratio of training and test set of data respectively
+
+	@param allData: consists of all the provided training examples
+		   trainingSet: pointer to the trainSet to be filtered
+		   testSet: pointer to the testSet to be filtered
+		   numExamples: total number of training examples
+		   numTrainingExamples: number of examples included in training set
+*/
 void splitTrainingAndTestData(trainingSet allData, trainingSet *trainSet, trainingSet *testSet, int numExamples, int numTrainingExamples)
 {
 	int taken[numExamples], count = 0, idxTrain = 0, idxTest = 0;
@@ -116,7 +154,12 @@ void splitTrainingAndTestData(trainingSet allData, trainingSet *trainSet, traini
 	}
 }
 
-/* Extracts all the data from file and returns the set of training examples */
+/**
+	Extracts all the data from file and returns the set of training examples
+	
+	@param size: size of input training examples
+	@return a training set of all input examples
+*/
 trainingSet extractData(int size)
 {
 	FILE* fp = fopen("zoo-data.txt", "r");
@@ -164,7 +207,12 @@ trainingSet extractData(int size)
 	return set;
 }
 
-/* Prints all the training examples in the training set */
+/**
+	Prints all the training examples in the training set
+
+	@param set: the training set to be printed
+		   numTrainingExamples: number of examples in training set
+*/
 void printTrainingSet(trainingSet set, int numTrainingExamples)
 {
 	for(int i=0; i<numTrainingExamples; i++){
@@ -176,7 +224,11 @@ void printTrainingSet(trainingSet set, int numTrainingExamples)
 	}
 }
 
-/* Prints a hypothesis */
+/**
+	Prints a hypothesis
+
+	@param: hypothesis to be printed
+*/
 void printHypothesis(hypothesis h)
 {
 	printf("hypothesis: <");
@@ -191,7 +243,13 @@ void printHypothesis(hypothesis h)
 	printf(">");
 }
 
-/* Check if two hypotheses are equal */
+/**
+	Check if two hypotheses are equal
+
+	@param h1: the first hypothesis
+		   h2: the second hypothesis
+	@return 1 if both are equal, 0 otherwise
+*/
 int equal(hypothesis h1, hypothesis h2)
 {
 	for(int i=0; i<NUMATTRS; i++){
@@ -201,7 +259,13 @@ int equal(hypothesis h1, hypothesis h2)
 	return 1;
 }
 
-/* Check if h is part of a hypothesisSet */
+/**
+	Check if h is part of a hypothesisSet
+
+	@param hs: the hypothesis set to be used
+		   h: the hypothesis to be searched
+	@return 1 if h if found in the set, 0 otherwise
+*/
 int find(hypothesisSet hs, hypothesis h)
 {
 	for(int i=0; i<hs.size; i++){
@@ -212,7 +276,11 @@ int find(hypothesisSet hs, hypothesis h)
 	return -1;
 }
 
-/* Prints all the hypotheses in the hypothesis set */
+/**
+	Prints all the hypotheses in the hypothesis set
+	
+	@param hs: the hypothesis set to be printed
+*/
 void printHypothesisSet(hypothesisSet hs)
 {
 	printf("SIZE = %d\n", hs.size);
@@ -223,7 +291,11 @@ void printHypothesisSet(hypothesisSet hs)
 	}
 }
 
-/* Prints a training example */
+/**
+	Prints a training example
+	
+	@param te: the training example to be printed
+*/
 void printTrainingExample(trainingExample te) {
 	printf("TE: <");
 	for(int i=0; i<NUMATTRS; i++){
@@ -232,7 +304,12 @@ void printTrainingExample(trainingExample te) {
 	printf(">  value: %d\n",te.value);
 }
 
-/* Adds a hypothesis to a hypothesis Set */
+/**
+	Adds a hypothesis to a hypothesis Set if not already present
+	
+	@param hs: the pointer to the set of the hypotheses
+		   h: the hypothesis to be added the set
+*/
 void addToHypothesisSet(hypothesisSet *hs,hypothesis h){
     for(int i=0;i<(*hs).size;i++){
         if(equal((*hs).hyp[i], h))
@@ -242,13 +319,23 @@ void addToHypothesisSet(hypothesisSet *hs,hypothesis h){
     (*hs).size++;
 }
 
-/* Removes a hypothesis from a hypothesis set */
+/** Removes a hypothesis from a hypothesis set 
+
+	@param hs: the pointer to the set of the hypotheses
+		   j: the index of the hypothesis in the given set	
+*/
 void removeFromHypothesisSet(hypothesisSet *hs, int j){
     (*hs).hyp[j]=(*hs).hyp[(*hs).size-1];
     (*hs).size--;
 }
 
-/* Checks if the first hypothesis is more general than the other */
+/**
+	Checks if the first hypothesis is more general than the other
+
+	@param h1: the first hypothesis
+		   h2: the second hypothesis
+	@return 1 is h1 is more general, 0 otherwise
+*/
 int isMoreGeneral(hypothesis h1, hypothesis h2)
 {
 	int more = 1;
@@ -263,7 +350,13 @@ int isMoreGeneral(hypothesis h1, hypothesis h2)
 	return more;
 }
 
-/* Checks if the first hypothesis is more specific than the other */
+/**
+	Checks if the first hypothesis is more specific than the other
+	
+	@param h1: the first hypothesis
+		   h2: the second hypothesis
+	@return 1 is h1 is more specific, 0 otherwise
+*/
 int isMoreSpecific(hypothesis h1, hypothesis h2)
 {
 	int more = 1;
@@ -282,7 +375,13 @@ int isMoreSpecific(hypothesis h1, hypothesis h2)
 	return more;
 }
 
-/* Checks if there is a more general hypothesis present in the hypothesis set */
+/**
+	Checks if there is a more general hypothesis present in the hypothesis set
+
+	@param hs: pointer to the set of hypotheses
+		   h: the hypothesis to be checked
+	@return 1 is there exists a more general hypothesis, 0 otherwise
+*/
 int checkForMoreGeneral(hypothesisSet *hs, hypothesis h)
 {
 	for(int i=0; i<(*hs).size; i++){
@@ -294,7 +393,13 @@ int checkForMoreGeneral(hypothesisSet *hs, hypothesis h)
 	return 0;
 }
 
-/* Checks if there is a more specific hypothesis present in the hypothesis set */
+/**
+	Checks if there is a more specific hypothesis present in the hypothesis set
+
+	@param hs: pointer to the set of hypotheses
+		   h: the hypothesis to be checked
+	@return 1 is there exists a more specific hypothesis, 0 otherwise
+*/
 int checkForMoreSpecific(hypothesisSet* hs, hypothesis h)
 {
 	for(int i=0; i<(*hs).size; i++){
@@ -306,9 +411,16 @@ int checkForMoreSpecific(hypothesisSet* hs, hypothesis h)
 	return 0;
 }
 
-/* Returns the unique minimal generalization, h, of s such that h matches
-   the given positive instance and some member of G is more general (or
-   equally general) than h. */
+/**
+	Returns the unique minimal generalization, h, of s such that h matches
+    the given positive instance and some member of G is more general (or
+    equally general) than h.
+
+	@param S: pointer to the specific boundary of hypotheses
+		   G: pointer to the general boundary of hypotheses
+		   h: current hypothesis
+		   te: current instance of training data set
+*/
 void getMinGeneralization(hypothesisSet *S, hypothesisSet* G, hypothesis h, trainingExample te)
 {
 	for(int i=0; i<NUMATTRS; i++){
@@ -326,7 +438,14 @@ void getMinGeneralization(hypothesisSet *S, hypothesisSet* G, hypothesis h, trai
 	}
 }
 
-/* Specialize just enough */
+/**
+	Specializes just enough
+	
+	@param G: pointer to the general boundary of hypotheses
+		   S: pointer to the specific boundary of hypotheses
+		   h: current hypothesis
+		   te: current instance of training data set
+*/
 void getMinSpecialization(hypothesisSet* G, hypothesisSet* S, hypothesis h, trainingExample te)
 {
 	int values[] = {0,2,4,5,6,8};
@@ -373,7 +492,14 @@ void getMinSpecialization(hypothesisSet* G, hypothesisSet* S, hypothesis h, trai
 	}
 }
 
-/* The main algorithm for calculating Version Space using Candidate Elimination */
+/**
+	The main algorithm for calculating Version Space using Candidate Elimination
+	
+	@param ts: the training set of examples
+		   numTrainingExamples: number of training examples
+		   posValue: the class for which version space is to be determined
+	@return the version space for the current class
+*/
 versionSpace solve(trainingSet ts, int numTrainingExamples, int posValue)
 {
 	versionSpace vs;
